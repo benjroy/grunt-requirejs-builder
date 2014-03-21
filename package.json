@@ -1,0 +1,33 @@
+{
+  "name": "grunt-contrib-requirejs-builder",
+  "version": "0.0.1",
+  "description": "grunt task for assisting requirejs optimizer builds",
+  "main": "Gruntfile.js",
+  "directories": {
+    "test": "test"
+  },
+  "dependencies": {
+    "ncp": "~0.2.6",
+    "node-watch": "~0.2.6",
+    "express": "~3.1.0",
+    "q": "~0.8.11",
+    "requirejs": "~2.1.5",
+    "stylus": "~0.32.1",
+    "underscore": "~1.4.4",
+    "watch": "~0.5.1",
+    "wrench": "~1.4.4",
+    "backbone": "~1.1.0"
+  },
+  "devDependencies": {},
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "keywords": [
+    "grunt",
+    "requirejs",
+    "optimizer",
+    "build"
+  ],
+  "author": "Benjamin Allen",
+  "license": "BSD-2-Clause"
+}
