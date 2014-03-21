@@ -2,7 +2,7 @@
 
 var _ = require('lodash');
 var q = require('q');
-var path = require('path');
+var vm = require('vm');
 
 var patternOpen = 'define\\( *(\'|")';
 var patternClose = '(\'|") *,';
@@ -10,18 +10,25 @@ var patternClose = '(\'|") *,';
 var REG_OPEN = new RegExp(patternOpen, 'g');
 var REG_CLOSE = new RegExp(patternClose, 'g');
 var REG_DEFINE = new RegExp(patternOpen + '[a-zA-Z0-9\\.\\-\\_]+' + patternClose, 'g');
-var BUILD_FOLDER = '_build';
-var BUILD_PATH = path.join('public', BUILD_FOLDER);
-var PATHS_MAP_TARGET = path.join(BUILD_PATH, '_auto-paths.js');
 
 module.exports = function (grunt) {
     var DEBUG = !!grunt.option('debug');
 
-    grunt.registerTask('requirejsPaths', function () {
-        q.resolve().then(function () {
 
+    grunt.registerTask('requirejs-builder', function () {
+        //requires config
+        grunt.config.requires('requirejs-builder');
+
+        var SRC = grunt.config('requirejs-builder.src');
+        var BUILD_PATH = grunt.config('requirejs-builder.target');
+        var BASE_URL = grunt.config('requirejs-builder.baseUrl');
+        var REQUIRE_CONFIG = grunt.config('requirejs-builder.requireConfig');
+        var REQUIRE_CONFIG_OUTPUT = grunt.config('requirejs-builder.requireConfigOutput');
+
+        q.resolve().then(function () {
             //copy named first-party modules.  output module names and target destinations
-            var assets = grunt.file.expand(['public/javascripts/**/*.js']);
+
+            var assets = grunt.file.expand(SRC);
             return _.reduce(assets, function (memo, filePath) {
 
                 if (!grunt.file.isDir(filePath)) {
@@ -41,39 +48,51 @@ module.exports = function (grunt) {
                 return memo;
 
             }, {});
+
         }).then(function (paths) {
-            //write the paths output to a file
-            var relativePaths = {};
+            //extend paths into require config
+
+            var requireConfigFile = grunt.file.read(REQUIRE_CONFIG);
+
+            //extract base require config
+            var context = {
+                requirejs: {
+                    config: function (_config) {
+                        this.config = _config;
+                    }
+                },
+                require: function () {}
+            };
+            vm.runInNewContext(requireConfigFile, context);
+            var requireConfig = context.requirejs.config;
+
+            //write baseUrl
+            requireConfig.baseUrl = BASE_URL;
+
             _.each(paths, function (filePath, moduleName) {
-                relativePaths[moduleName] = '.' + filePath.slice(BUILD_PATH.length, -3);
+                requireConfig.paths[moduleName] = '.' + filePath.slice(BUILD_PATH.length, -3);
             });
 
-            grunt.file.write(PATHS_MAP_TARGET, 'var _bt = _bt || {};\n_bt.baseUrl = \'' + BUILD_FOLDER + '\';\n_bt.paths = ' + JSON.stringify(relativePaths, null, 4) + ';');
+            return requireConfig;
 
-            if (DEBUG) { grunt.log.ok('require paths: ' + JSON.stringify(relativePaths, null, 4)); }
-        }).then(function () {
+        }).then(function (requireConfig) {
             //write a new require config file
 
-            // var sandboxContext = {
-            //     requirejs: {
-            //         config: function (_config) {
-            //             this._config = _config;
-            //         }
-            //     },
-            //     require: function () {}
-            // };
-            // var requireConfig = fs.readFileSync('public/javascripts/require-config.js', 'utf8');
-            // vm.runInNewContext(requireConfig, sandboxContext);
-            // requireConfig = sandboxContext.requirejs.requireConfig;
-            // var BASE_PATH = 'javascripts'
-            // var requirePaths = _.map(_.values(_config.paths), function (relPath) {
-            //     return path.join(BASE_PATH, relPath + '.js');
-            // });
+            var builtRequireConfig = JSON.stringify(requireConfig, function (key, value) {
+                if (typeof value === 'function') {
+                    return '/*fn*/' + value.toString() + '/*fn*/';
+                }
+                return value;
+            }, 4);
+            //make function strings executable again after the stringify
+            builtRequireConfig = builtRequireConfig.replace(/"\/\*fn\*\//g, '')
+                    .replace(/\/\*fn\*\/"/g, '')
+                    .replace(/\\n/g, '\n');
 
-            // console.log('config?', requirePaths);
-
-        }).then(function () {
-
+            //wrap src in requirejs.config call;
+            builtRequireConfig = 'requirejs.config(' + builtRequireConfig + ');';
+            //write it to the output path
+            grunt.file.write(REQUIRE_CONFIG_OUTPUT, builtRequireConfig);
 
         }).nodeify(this.async());
     });
