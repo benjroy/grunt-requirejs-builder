@@ -14,12 +14,17 @@ var REG_DEFINE = new RegExp(patternOpen + '[a-zA-Z0-9\\.\\-\\_]+' + patternClose
 module.exports = function (grunt) {
     var DEBUG = !!grunt.option('debug');
 
-
     grunt.registerTask('requirejs-builder', function () {
         //requires config
-        grunt.config.requires('requirejs-builder');
+        grunt.config.requires('requirejs-builder.src');
+        grunt.config.requires('requirejs-builder.base');
+        grunt.config.requires('requirejs-builder.target');
+        grunt.config.requires('requirejs-builder.baseUrl');
+        grunt.config.requires('requirejs-builder.requireConfig');
+        grunt.config.requires('requirejs-builder.requireConfigOutput');
 
         var SRC = grunt.config('requirejs-builder.src');
+        var BUILD_BASE = grunt.config('requirejs-builder.base');
         var BUILD_PATH = grunt.config('requirejs-builder.target');
         var BASE_URL = grunt.config('requirejs-builder.baseUrl');
         var REQUIRE_CONFIG = grunt.config('requirejs-builder.requireConfig');
@@ -33,7 +38,7 @@ module.exports = function (grunt) {
 
                 if (!grunt.file.isDir(filePath)) {
                     var file = grunt.file.read(filePath);
-                    var targetPath = filePath.replace('public', BUILD_PATH);
+                    var targetPath = filePath.replace(BUILD_BASE, BUILD_PATH);
                     var namedDefineMatch = file.match(REG_DEFINE);
                     if (namedDefineMatch) {
                         var moduleName = namedDefineMatch[0].replace(REG_OPEN, '').replace(REG_CLOSE, '');
@@ -48,6 +53,7 @@ module.exports = function (grunt) {
                 return memo;
 
             }, {});
+
 
         }).then(function (paths) {
             //extend paths into require config
