@@ -187,7 +187,6 @@ module.exports = function (grunt) {
                 var optimizePromises = _.map(_modules.entry, function (filePath, moduleName) {
                     var relativePath = path.relative(BUILD_PATH, filePath);
                     var name = path.join(path.dirname(relativePath), path.basename(relativePath, '.js'));
-                    // console.log('out', name);
                     var opts = _.clone(rjsOpts);
                     _.extend(opts, {
                         name: name,
@@ -268,7 +267,7 @@ module.exports = function (grunt) {
                     if (options.paths && options.paths[moduleName] === 'empty:') { return; }
                     //get path of module from requireConfig
                     optimizeConfig[moduleName] = _.extend(_.clone(baseOptimizeOptions), {
-                        out: path.join(options.build, options.baseUrl, _requireConfig.paths[moduleName]),
+                        out: path.join(options.build, options.baseUrl, _requireConfig.paths[moduleName] + '.js'),
                         exclude: _modules.common,
                         include: [ moduleName ],
                         name: moduleName,
