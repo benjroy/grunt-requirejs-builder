@@ -9,7 +9,6 @@
   },
   "dependencies": {
     "lodash": "~2.4.1",
-    "madge": "^0.3.0",
     "q": "~0.8.11",
     "requirejs": "^2.1.13"
   },
