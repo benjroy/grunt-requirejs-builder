@@ -1,6 +1,6 @@
 {
   "name": "grunt-requirejs-builder",
-  "version": "0.0.5",
+  "version": "0.1.2",
   "description": "grunt task for assisting requirejs optimizer builds",
   "main": "Gruntfile.js",
   "repository": "https://github.com/benjroy/grunt-requirejs-builder.git",
