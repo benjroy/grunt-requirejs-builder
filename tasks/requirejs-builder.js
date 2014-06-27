@@ -35,7 +35,6 @@ module.exports = function (grunt) {
             overrides: {}
         });
 
-        // var options = this.options(this.data);
         _.each({
             baseUrl: 'Target directory for the built files.  Load scripts out of this directory.',
             mainConfigFile: 'Location of your require-config file, relative to appDir.',
@@ -224,11 +223,11 @@ module.exports = function (grunt) {
                 grunt.file.mkdir(options.build);
 
                 var optimizeConfig = {};
-                var baseOptimizeOptions = _.extend(_.omit(options, 'src', 'build', 'overrides', 'common', 'appDir'), {
+                optimizeConfig.options = _.extend(_.omit(options, 'src', 'build', 'overrides', 'common', 'appDir'), {
                     mainConfigFile: REQUIRE_CONFIG_OUTPUT,
                     baseUrl: BUILD_PATH
                 });
-                _.extend(baseOptimizeOptions.paths, {
+                _.extend(optimizeConfig.options.paths, {
                     mainConfigFile: options.mainConfigFile.slice(0, -3),
                     requireLib: options.requireLib.slice(0, -3)
                 });
@@ -237,48 +236,50 @@ module.exports = function (grunt) {
 
                 //add common config
                 if (options.common) {
-                    optimizeConfig.base = _.extend(_.clone(baseOptimizeOptions), {
-                        out: path.join(options.build, 'base.js'),
-                        // out: 'base.js',
-                        include: _modules.common.concat(REQUIRE_AND_CONFIG),
-                        name: 'base',
-                        create: true
-                    });
+                    optimizeConfig.base = {
+                        options: {
+                            out: path.join(options.build, 'base.js'),
+                            include: _modules.common.concat(REQUIRE_AND_CONFIG),
+                            name: 'base',
+                            create: true
+                        }
+                    };
                 }
                 //build config for entry modules
                 _.each(_modules.entry, function (filePath, moduleName) {
-                    optimizeConfig[moduleName] = _.extend(_.clone(baseOptimizeOptions), {
+                    var moduleOptions = {
                         out: path.join(options.build, filePath.replace(BUILD_BASE, '.')),
                         name: filePath.replace(BUILD_PATH, '.').slice(0, -3)
-                    });
+                    };
                     //inject specific targeted overrides
                     if (options.overrides && options.overrides[moduleName]) {
-                        _.extend(optimizeConfig[moduleName], options.overrides[moduleName]);
+                        _.extend(moduleOptions, options.overrides[moduleName]);
                     }
                     if (options.common) {
-                        optimizeConfig[moduleName].exclude = _modules.common;
+                        moduleOptions.exclude = _modules.common;
                     } else {
-                        optimizeConfig[moduleName].include = REQUIRE_AND_CONFIG;
+                        moduleOptions.include = REQUIRE_AND_CONFIG;
                     }
+                    optimizeConfig[moduleName] = { options: moduleOptions };
                 });
                 //add lazy loaded modules
                 _.each(_modules.lazy, function (moduleName) {
                     //don't package up empty: modules.
                     if (options.paths && options.paths[moduleName] === 'empty:') { return; }
                     //get path of module from requireConfig
-                    optimizeConfig[moduleName] = _.extend(_.clone(baseOptimizeOptions), {
+                    var configOptions = {
                         out: path.join(options.build, options.baseUrl, _requireConfig.paths[moduleName] + '.js'),
                         exclude: _modules.common,
                         include: [ moduleName ],
                         name: moduleName,
                         create: true
-                    });
+                    };
+                    optimizeConfig[moduleName] = { options: configOptions };
                 });
 
-                grunt.log.ok('Optimizing RequireJS Build.');
-
-                //send all of them to the optimizer
-                return q.all(_.map(optimizeConfig, _promiseToOptimize));
+                grunt.log.ok('Setting grunt-requirejs config.');
+                grunt.config.set('requirejs', optimizeConfig);
+                return q.resolve();
             }
 
         }).nodeify(this.async());
