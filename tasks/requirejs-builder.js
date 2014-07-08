@@ -138,7 +138,9 @@ module.exports = function (grunt) {
             var requireConfig = context.requirejs.config;
 
             //write baseUrl
-            requireConfig.baseUrl = '/' + options.baseUrl;
+            if (!requireConfig.baseUrl) {
+                requireConfig.baseUrl = '/' + options.baseUrl;
+            }
             //write the relative filepath in the new require config
             _.each(_modules.paths, function (filePath, moduleName) {
                 requireConfig.paths[moduleName] = '.' + filePath.slice(BUILD_PATH.length, -3);
